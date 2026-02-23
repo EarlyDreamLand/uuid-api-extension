@@ -1,5 +1,4 @@
 <?php
-
 namespace EarlyDreamLand\APIExtension\Controllers;
 
 use App\Http\Controllers\Controller;
@@ -18,65 +17,75 @@ class TextureController extends Controller
     {
         $this->middleware('cache.headers:etag;public;max_age=' . option('cache_expire_time'))
             ->only([
+                'avatarByIdentifier',
                 'avatarByUuid',
                 'textureByUuid',
             ]);
     }
 
+    public function avatarByIdentifier(Minecraft $minecraft, Request $request, $identifier)
+    {
+        $cleanUuid = str_replace('-', '', $identifier);
+        $uuidRecord = DB::table('uuid')->where('uuid', $cleanUuid)->first();
+        
+        if ($uuidRecord) {
+            $player = Player::find($uuidRecord->pid);
+            
+            if ($player) {
+                return $this->getAvatar($minecraft, $request, $player);
+            }
+        }
+
+        $player = Player::where('name', $identifier)->first();
+        
+        if ($player) {
+            return $this->getAvatar($minecraft, $request, $player);
+        }
+
+        $texture = null;
+        return $this->avatar($minecraft, $request, $texture);
+    }
+
     public function avatarByUuid(Minecraft $minecraft, Request $request, $uuid)
     {
-        // 移除 UUID 中的连字符（如果有的话）
         $cleanUuid = str_replace('-', '', $uuid);
 
-        // 1. 在 uuid 表中查询该 UUID 对应的记录
         $uuidRecord = DB::table('uuid')->where('uuid', $cleanUuid)->first();
 
         if (!$uuidRecord) {
             abort(404, 'UUID not found');
         }
 
-        // 2. 通过 pid 关联查询 players 表，获取玩家信息
         $player = Player::find($uuidRecord->pid);
 
         if (!$player) {
             abort(404, 'Player not found');
         }
 
-        // 3. 获取玩家皮肤纹理
-        if (!$player->tid_skin) {
-            abort(404, 'Texture not found (no skin set)');
+        $texture = null;
+        if ($player->tid_skin) {
+            $texture = Texture::find($player->tid_skin);
         }
 
-        $texture = Texture::find($player->tid_skin);
-
-        if (!$texture) {
-            abort(404, 'Texture not found');
-        }
-
-        // 4. 调用头像生成方法（模仿官方avatarByPlayer方法）
         return $this->avatar($minecraft, $request, $texture);
     }
 
     public function textureByUuid(Request $request, $uuid)
     {
-        // 移除 UUID 中的连字符（如果有的话）
         $cleanUuid = str_replace('-', '', $uuid);
 
-        // 1. 在 uuid 表中查询该 UUID 对应的记录
         $uuidRecord = DB::table('uuid')->where('uuid', $cleanUuid)->first();
 
         if (!$uuidRecord) {
             abort(404, 'UUID not found');
         }
 
-        // 2. 通过 pid 关联查询 players 表，获取玩家信息
         $player = Player::find($uuidRecord->pid);
 
         if (!$player) {
             abort(404, 'Player not found');
         }
 
-        // 3. 获取玩家皮肤纹理
         if (!$player->tid_skin) {
             abort(404, 'Texture not found (no skin set)');
         }
@@ -87,13 +96,21 @@ class TextureController extends Controller
             abort(404, 'Texture not found');
         }
 
-        // 4. 调用皮肤文件获取方法（模仿官方texture方法）
         return $this->texture($texture->hash);
+    }
+
+    protected function getAvatar(Minecraft $minecraft, Request $request, Player $player)
+    {
+        $texture = null;
+        if ($player->tid_skin) {
+            $texture = Texture::find($player->tid_skin);
+        }
+
+        return $this->avatar($minecraft, $request, $texture);
     }
 
     protected function avatar(Minecraft $minecraft, Request $request, ?Texture $texture)
     {
-        // 完全模仿官方TextureController中的avatar方法
         if (!empty($texture) && $texture->type !== 'steve' && $texture->type !== 'alex') {
             return abort(422);
         }
@@ -139,7 +156,6 @@ class TextureController extends Controller
 
     protected function texture(string $hash)
     {
-        // 完全模仿官方TextureController中的texture方法
         $disk = Storage::disk('textures');
         abort_if($disk->missing($hash), 404);
 
