@@ -11,15 +11,13 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
-class TextureController extends Controller
+class AvatarController extends Controller
 {
     public function __construct()
     {
         $this->middleware('cache.headers:etag;public;max_age=' . option('cache_expire_time'))
             ->only([
-                'avatarByIdentifier',
-                'avatarByUuid',
-                'textureByUuid',
+                'avatarByIdentifier'
             ]);
     }
 
@@ -44,59 +42,6 @@ class TextureController extends Controller
 
         $texture = null;
         return $this->avatar($minecraft, $request, $texture);
-    }
-
-    public function avatarByUuid(Minecraft $minecraft, Request $request, $uuid)
-    {
-        $cleanUuid = str_replace('-', '', $uuid);
-
-        $uuidRecord = DB::table('uuid')->where('uuid', $cleanUuid)->first();
-
-        if (!$uuidRecord) {
-            abort(404, 'UUID not found');
-        }
-
-        $player = Player::find($uuidRecord->pid);
-
-        if (!$player) {
-            abort(404, 'Player not found');
-        }
-
-        $texture = null;
-        if ($player->tid_skin) {
-            $texture = Texture::find($player->tid_skin);
-        }
-
-        return $this->avatar($minecraft, $request, $texture);
-    }
-
-    public function textureByUuid(Request $request, $uuid)
-    {
-        $cleanUuid = str_replace('-', '', $uuid);
-
-        $uuidRecord = DB::table('uuid')->where('uuid', $cleanUuid)->first();
-
-        if (!$uuidRecord) {
-            abort(404, 'UUID not found');
-        }
-
-        $player = Player::find($uuidRecord->pid);
-
-        if (!$player) {
-            abort(404, 'Player not found');
-        }
-
-        if (!$player->tid_skin) {
-            abort(404, 'Texture not found (no skin set)');
-        }
-
-        $texture = Texture::find($player->tid_skin);
-
-        if (!$texture) {
-            abort(404, 'Texture not found');
-        }
-
-        return $this->texture($texture->hash);
     }
 
     protected function getAvatar(Minecraft $minecraft, Request $request, Player $player)
