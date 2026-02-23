@@ -1,0 +1,19 @@
+{
+  "name": "uuid-api-extension",
+  "version": "0.0.1",
+  "title": "UUID扩展",
+  "description": "可以使用 UUID 查询玩家姓名、头像、皮肤数据等。",
+  "author": "EarlyDreamLand",
+  "namespace": "EarlyDreamLand\\APIExtension",
+  "url": "https://github.com/EarlyDreamLand/uuid-api-extension",
+  "require": {
+    "blessing-skin-server": "^5|^6",
+    "yggdrasil-connect": "^6"
+  },
+  "enchants": {
+    "icon": {
+      "fa": "database",
+      "bg": "blue"
+    }
+  }
+}
